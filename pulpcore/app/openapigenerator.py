@@ -5,6 +5,7 @@ import uritemplate
 from drf_yasg import openapi
 from drf_yasg.generators import OpenAPISchemaGenerator
 from drf_yasg.inspectors import SwaggerAutoSchema
+from drf_yasg.openapi import Parameter
 from drf_yasg.utils import filter_none, force_real_str
 
 
@@ -263,6 +264,14 @@ class PulpAutoSchema(SwaggerAutoSchema):
 
         body = self.get_request_body_parameters(consumes)
         query = self.get_query_parameters()
+        fields_paramenter = Parameter(
+            name="fields",
+            in_="query",
+            description="Select a subset of fields",
+            required=False,
+            type="string",
+        )
+        query.append(fields_paramenter)
         parameters = body + query
         parameters = filter_none(parameters)
         parameters = self.add_manual_parameters(parameters)
