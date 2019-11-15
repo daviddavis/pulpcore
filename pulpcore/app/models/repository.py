@@ -435,6 +435,17 @@ class RepositoryVersion(Model):
         """
         Artifact.objects.filter(content__pk__in=self.content)
 
+    @property
+    def previous_version(self):
+        """
+        Returns the previous version. If there is no previous version, returns None.
+
+        Returns:
+            RepositoryVersion: the previous version of this version.
+        """
+        RepositoryVersion.filter(repository=self.repository,
+                                 number__lt=self.number).order("number").first()
+
     def added(self):
         """
         Returns:
