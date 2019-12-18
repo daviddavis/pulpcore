@@ -9,6 +9,9 @@
 
 set -mveuo pipefail
 
+echo "GITHUB REPO!!!!"
+echo "$(github_repo)"
+
 export PRE_BEFORE_INSTALL=$TRAVIS_BUILD_DIR/.travis/pre_before_install.sh
 export POST_BEFORE_INSTALL=$TRAVIS_BUILD_DIR/.travis/post_before_install.sh
 
