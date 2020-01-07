@@ -417,6 +417,6 @@ class CreatedResource(GenericRelationModel):
     task = models.ForeignKey(
         Task,
         related_name='created_resources',
-        default=Task.current,
+        default=Task.current(),
         on_delete=models.CASCADE
     )

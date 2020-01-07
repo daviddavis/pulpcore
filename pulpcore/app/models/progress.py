@@ -115,7 +115,7 @@ class ProgressReport(BaseModel):
     task = models.ForeignKey(
         'Task',
         related_name='progress_reports',
-        default=Task.current,
+        default=Task.current(),
         on_delete=models.CASCADE
     )
 
