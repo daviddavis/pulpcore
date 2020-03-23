@@ -15,8 +15,12 @@ PR_NUMBER = os.environ["PR_NUMBER"]
 PR_STATUS = 3  # POST
 KEYWORDS = ["fixes", "closes", "re", "ref"]
 
-if not REDMINE_KEY or not GITHUB_TOKEN:
-    print("Missing redmine and/or github api key.")
+if not REDMINE_KEY:
+    print("Missing redmine.")
+    exit(0)
+
+if not GITHUB_TOKEN:
+    print("Missing github api key.")
     exit(0)
 
 redmine = Redmine(REDMINE_URL, key=REDMINE_KEY)
