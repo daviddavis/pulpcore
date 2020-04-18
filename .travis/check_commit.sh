@@ -9,10 +9,7 @@
 
 set -euv
 
-# skip this check for everything but PRs
-if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-  exit 0
-fi
+export PROJECT="pulp"
 
 if [ "$TRAVIS_COMMIT_RANGE" != "" ]; then
   RANGE=$TRAVIS_COMMIT_RANGE
@@ -30,7 +27,7 @@ fi
 for sha in `git log --format=oneline --no-merges "$RANGE" | cut '-d ' -f1`
 do
   pip install requests
-  python .travis/validate_commit_message.py $sha
+  python .travis/validate_commit_message.py $sha $PROJECT
   VALUE=$?
 
   if [ "$VALUE" -gt 0 ]; then

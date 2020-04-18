@@ -31,6 +31,7 @@ pulpcore_branch: null
 pulpcore_pip_version_specifier: null
 pydocstyle: true
 pypi_username: pulp
+redmine_project: 'pulp'
 stable_branch: '3.3'
 test_bindings: true
 test_performance: false
