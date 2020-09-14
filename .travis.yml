@@ -15,11 +15,11 @@ python:
   # - "3.6"
   - "3.7"
 env:
-  matrix:
-    - TEST=pulp
-    - TEST=docs
-    - TEST=bindings
-    - TEST=s3
+  matrix: []
+    #- TEST=pulp
+    #- TEST=docs
+    #- TEST=bindings
+    #- TEST=s3
 services:
   - postgresql
   - redis-server
@@ -42,6 +42,12 @@ after_failure:
   - docker logs pulp
 jobs:
   include:
+    - stage: pulplift
+      name: "Test in pulplift fips environment"
+      before_install: cd .. && git clone --recursive --branch reuse-install https://github.com/daviddavis/pulplift
+      install: cd pulplift && ./.travis/install.sh
+      before_script: skip
+      script: bash ../pulpcore/.travis/pulplift.sh
     - stage: deploy
       name: "Deploy plugin to pypi"
       before_install: skip
