@@ -4,9 +4,10 @@ from gettext import gettext as _
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError
+from django.db.models import Q
 from pulpcore import constants
 from pulpcore.app import pulp_hashlib
-from pulpcore.plugin.models import Artifact
+from pulpcore.plugin.models import Artifact, ContentArtifact, RemoteArtifact, RepositoryVersion
 
 import logging
 
@@ -15,12 +16,37 @@ log = logging.getLogger("")
 CHUNK_SIZE = 1024 * 1024  # 1 Mb
 
 
+def _show_on_demand_content(checksums):
+    query = Q(pk__in=[])
+    for checksum in checksums:
+        query |= Q(**{f"{checksum}__isnull": False})
+    remote_artifacts = RemoteArtifact.objects.filter(query)
+
+    content = (
+        ContentArtifact.objects.filter(remoteartifact__pk__in=remote_artifacts)
+        .filter(artifact=None)
+        .values_list("content", flat=True)
+    )
+    repo_versions = RepositoryVersion.has_content(content)
+
+    print(_("Found {} on-demand content units with forbidden checksums.").format(content.count()))
+
+    if repo_versions.exists():
+        print(_("\nAffected repository versions:"))
+        for repo_version in repo_versions:
+            print(_("{} (version {})").format(repo_version.repository.name, repo_version.number))
+
+
 class Command(BaseCommand):
     """
     Django management command for populating or removing checksums on artifacts.
     """
 
     help = _("Handle missing and forbidden checksums on the artifacts")
+
+    def add_arguments(self, parser):
+        parser.add_argument("--report", action="store_true")
+        parser.add_argument("--checksums", help=_("Comma separated list of checksums to evaluate"))
 
     def _download_artifact(self, artifact, checksum, file_path):
         restored = False
@@ -44,7 +70,27 @@ class Command(BaseCommand):
                 break
         return restored
 
+    def _report(self, checksums):
+        if checksums:
+            checksums = checksums.split(",")
+            if "sha256" not in checksums:
+                raise CommandError(_("Checksums must contain sha256"))
+        else:
+            checksums = settings.ALLOWED_CONTENT_CHECKSUMS
+
+        forbidden_checksums = set(constants.ALL_KNOWN_CONTENT_CHECKSUMS).difference(checksums)
+
+        _show_on_demand_content(forbidden_checksums)
+
     def handle(self, *args, **options):
+
+        if options["report"]:
+            self._report(options["checksums"])
+            return
+
+        if options["checksums"] and not options["report"]:
+            print(_("Checksums cannot be supplied with --report argument"))
+            exit(1)
 
         log.setLevel(logging.ERROR)
         hrefs = set()

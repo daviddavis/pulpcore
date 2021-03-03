@@ -10,6 +10,7 @@ import django
 from asyncio_throttle import Throttler
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.db.models import Q
 from django.urls import reverse
 
 from pulpcore.app.util import batch_qs, get_view_name_for_model
@@ -467,6 +468,23 @@ class RepositoryVersion(BaseModel):
         unique_together = ("repository", "number")
         get_latest_by = "number"
         ordering = ("number",)
+
+    @classmethod
+    def has_content(cls, content):
+        query = Q(pk__in=[])
+        repo_content = RepositoryContent.objects.filter(content__pk__in=content)
+
+        for rc in repo_content:
+            filter = Q(
+                repository__pk=rc.repository.pk,
+                number__gte=rc.version_added.number,
+            )
+            if rc.version_removed:
+                filter &= Q(number__lt=rc.version_removed.number)
+
+            query |= filter
+
+        return cls.objects.filter(query)
 
     def _content_relationships(self):
         """
