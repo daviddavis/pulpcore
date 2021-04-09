@@ -54,6 +54,7 @@ from .repository import (  # noqa
     RemoteViewSet,
     RepositoryViewSet,
     RepositoryVersionViewSet,
+    ListRepositoryVersionViewSet,
 )
 from .task import TaskViewSet, TaskGroupViewSet, WorkerViewSet  # noqa
 from .upload import UploadViewSet  # noqa

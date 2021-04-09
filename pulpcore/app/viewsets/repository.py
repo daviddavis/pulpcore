@@ -247,6 +247,17 @@ class RepositoryVersionViewSet(
         return OperationPostponedResponse(task, request)
 
 
+class ListRepositoryVersionViewSet(NamedModelViewSet, mixins.ListModelMixin):
+    endpoint_name = "repository_versions"
+    serializer_class = RepositoryVersionSerializer
+    queryset = RepositoryVersion.objects.all()
+
+    @classmethod
+    def is_master_viewset(cls):
+        """Do not hide from the routers."""
+        return False
+
+
 class RemoteFilter(BaseFilterSet):
     """
     Plugin remote filter should:
