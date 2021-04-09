@@ -138,7 +138,11 @@ class PulpPluginAppConfig(apps.AppConfig):
                 try:
                     # Any subclass of NamedModelViewSet that isn't itself NamedModelViewSet
                     # gets registered in the named_viewsets registry.
-                    if obj is not NamedModelViewSet and issubclass(obj, NamedModelViewSet):
+                    if (
+                        obj is not NamedModelViewSet
+                        and issubclass(obj, NamedModelViewSet)
+                        and obj.__module__.startswith(viewsets_module_name)
+                    ):
                         model = obj.queryset.model
                         self.named_viewsets[model].append(obj)
                 except TypeError:
