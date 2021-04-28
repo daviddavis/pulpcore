@@ -22,6 +22,7 @@ from pulpcore.exceptions import ResourceImmutableError
 
 from .base import MasterModel, BaseModel
 from .content import Artifact, Content
+from .fields import EncryptedTextField
 from .task import CreatedResource, Task
 
 
@@ -275,15 +276,15 @@ class Remote(MasterModel):
 
     ca_cert = models.TextField(null=True)
     client_cert = models.TextField(null=True)
-    client_key = models.TextField(null=True)
+    client_key = EncryptedTextField(null=True)
     tls_validation = models.BooleanField(default=True)
 
-    username = models.TextField(null=True)
-    password = models.TextField(null=True)
+    username = EncryptedTextField(null=True)
+    password = EncryptedTextField(null=True)
 
     proxy_url = models.TextField(null=True)
-    proxy_username = models.TextField(null=True)
-    proxy_password = models.TextField(null=True)
+    proxy_username = EncryptedTextField(null=True)
+    proxy_password = EncryptedTextField(null=True)
 
     download_concurrency = models.PositiveIntegerField(default=10)
     policy = models.TextField(choices=POLICY_CHOICES, default=IMMEDIATE)

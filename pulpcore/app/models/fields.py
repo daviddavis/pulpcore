@@ -1,11 +1,22 @@
+import base64
+import logging
 import os
 from gettext import gettext as _
 
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from django.conf import settings
 from django.db.models import FileField, Lookup
-from django.db.models.fields import Field
+from django.db.models.fields import Field, TextField
+from django.utils.encoding import force_bytes, force_str
+from django.utils.functional import cached_property
+
 
 from pulpcore.app.files import TemporaryDownloadedFile
+
+_logger = logging.getLogger(__name__)
 
 
 class ArtifactFileField(FileField):
@@ -66,6 +77,33 @@ class ArtifactFileField(FileField):
             file._committed = False
 
         return super().pre_save(model_instance, add)
+
+
+class EncryptedTextField(TextField):
+    """A field mixin that provides functionality to encrypt data using settings.SECRET_KEY."""
+
+    @cached_property
+    def _fernet(self):
+        _logger.debug(f"Loading encryption key from {settings.DB_ENCRYPTION_KEY}")
+        with open(settings.DB_ENCRYPTION_KEY, "rb") as key_file:
+            hkdf = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=b"pulp-hkdf-salt",
+                info=b"pulp-encrypted-field",
+                backend=default_backend(),
+            )
+            key = base64.urlsafe_b64encode(hkdf.derive(force_bytes(key_file)))
+            return Fernet(key)
+
+    def get_db_prep_save(self, value, connection):
+        value = super().get_db_prep_save(value, connection)
+        if value is not None:
+            return force_str(self._fernet.encrypt(force_bytes(value)))
+
+    def from_db_value(self, value, expression, connection):
+        if value is not None:
+            return force_str(self._fernet.decrypt(force_bytes(value)))
 
 
 @Field.register_lookup

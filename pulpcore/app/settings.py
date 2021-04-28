@@ -55,6 +55,9 @@ FILE_UPLOAD_HANDLERS = ("pulpcore.app.files.HashingFileUploadHandler",)
 
 SECRET_KEY = True
 
+# Key used to encrypt fields in the database
+DB_ENCRYPTION_KEY = "/etc/pulp/encryption_key"
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -211,7 +214,7 @@ LOGGING = {
         "": {
             # The root logger
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "DEBUG",
             "filters": ["correlation_id"],
         },
         "django_guid": {
@@ -291,6 +294,15 @@ except NameError:
             "CONTENT_ORIGIN is a required setting but it was not configured. This may be caused "
             "by invalid read permissions of the settings file. Note that CONTENT_ORIGIN is set by "
             "the installer automatically."
+        )
+    )
+
+try:
+    open(DB_ENCRYPTION_KEY, "rb")
+except Exception as ex:
+    raise ImproperlyConfigured(
+        _("Could not open DB_ENCRYPTION_KEY file '{file}': {err}.").format(
+            file=DB_ENCRYPTION_KEY, err=ex
         )
     )
 
