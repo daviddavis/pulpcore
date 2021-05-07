@@ -45,9 +45,7 @@ def orphan_cleanup():
     )
 
     while True:
-        content = Content.objects.filter(version_memberships__isnull=True).exclude(
-            pulp_type=PublishedMetadata.get_pulp_type()
-        )
+        content = Content.objects.orphaned().exclude(pulp_type=PublishedMetadata.get_pulp_type())
         content_count = content.count()
         if not content_count:
             break
@@ -64,7 +62,7 @@ def orphan_cleanup():
     progress_bar.save()
 
     # delete the artifacts that don't belong to any content
-    artifacts = Artifact.objects.filter(content_memberships__isnull=True)
+    artifacts = Artifact.objects.orphaned()
 
     progress_bar = ProgressReport(
         message="Clean up orphan Artifacts",

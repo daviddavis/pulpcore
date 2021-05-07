@@ -50,7 +50,13 @@ class QueryExistingContents(Stage):
             for model_type in content_q_by_type.keys():
                 for result in model_type.objects.filter(content_q_by_type[model_type]).iterator():
                     for d_content in d_content_by_nat_key[result.natural_key()]:
-                        d_content.content = result
+                        try:
+                            result.timestamp_of_interest = now()
+                            result.save(update_fields=["timestamp_of_interest"])
+                        except result.DoesNotExist:
+                            pass
+                        else:
+                            d_content.content = result
 
             for d_content in batch:
                 await self.put(d_content)

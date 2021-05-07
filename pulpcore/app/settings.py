@@ -229,6 +229,9 @@ CONTENT_APP_TTL = 30
 
 WORKER_TTL = 30
 
+# how long to perserve orphan content in minutes
+PERSERVED_ORPHAN_CONTENT = 24 * 60
+
 REMOTE_USER_ENVIRON_NAME = "REMOTE_USER"
 
 ALLOWED_IMPORT_PATHS = []

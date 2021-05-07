@@ -4,6 +4,7 @@ from gettext import gettext as _
 import logging
 
 from django.db.models import Prefetch, prefetch_related_objects
+from django.utils.timezone import now
 
 from pulpcore.plugin.exceptions import UnsupportedDigestValidationError
 from pulpcore.plugin.models import Artifact, ContentArtifact, ProgressReport, RemoteArtifact
@@ -93,7 +94,13 @@ class QueryExistingArtifacts(Stage):
                             for result in existing_artifacts:
                                 result_digest = getattr(result, digest_type)
                                 if result_digest == artifact_digest:
-                                    d_artifact.artifact = result
+                                    try:
+                                        result.timestamp_of_interest = now()
+                                        result.save(update_fields=["timestamp_of_interest"])
+                                    except result.DoesNotExist:
+                                        pass
+                                    else:
+                                        d_artifact.artifact = result
                                     break
 
             for d_content in batch:

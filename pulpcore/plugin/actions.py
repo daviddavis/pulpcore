@@ -1,3 +1,4 @@
+from django.utils.timezone import now
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 
@@ -49,6 +50,9 @@ class ModifyRepositoryActionMixin:
                 else:
                     content = self.get_resource(url, Content)
                     remove_content_units.append(content.pk)
+
+        # set timestamp_of_interest
+        Content.objects.filter(pk__in=add_content_units).update(timestamp_of_interest=now())
 
         task = dispatch(
             tasks.repository.add_and_remove,

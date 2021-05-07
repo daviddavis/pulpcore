@@ -3,6 +3,7 @@ from collections import namedtuple
 from drf_spectacular.utils import extend_schema
 
 from django.db.utils import IntegrityError
+from django.utils.timezone import now
 
 from pulpcore.app import tasks
 from pulpcore.plugin.serializers import (
@@ -110,6 +111,8 @@ class SingleArtifactContentUploadViewSet(DefaultDeferredContextMixin, ContentVie
             except IntegrityError:
                 # if artifact already exists, let's use it
                 artifact = Artifact.objects.get(sha256=artifact.sha256)
+                artifact.timestamp_of_interest = now()
+                artifact.save()
 
             task_payload["artifact"] = ArtifactSerializer(
                 artifact, context={"request": request}

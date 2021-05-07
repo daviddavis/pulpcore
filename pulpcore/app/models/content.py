@@ -3,6 +3,7 @@ Content related Django models.
 """
 from gettext import gettext as _
 
+import datetime
 import json
 import tempfile
 import shutil
@@ -17,7 +18,8 @@ from django.core import validators
 from django.core.files.storage import default_storage
 from django.db import IntegrityError, models, transaction
 from django.forms.models import model_to_dict
-from django_lifecycle import BEFORE_UPDATE, BEFORE_SAVE, hook
+from django.utils.timezone import now
+from django_lifecycle import AFTER_CREATE, BEFORE_UPDATE, BEFORE_SAVE, hook
 
 from pulpcore.constants import ALL_KNOWN_CONTENT_CHECKSUMS
 from pulpcore.app import pulp_hashlib
@@ -139,6 +141,13 @@ class HandleTempFilesMixin:
         self.file.delete(save=False)
 
 
+class ArtifactManager(BulkCreateManager):
+
+    def orphaned(self):
+        expiration = now() - datetime.timedelta(minutes=settings.PERSERVED_ORPHAN_CONTENT)
+        return self.filter(content_memberships__isnull=True, timestamp_of_interest__lt=expiration)
+
+
 class Artifact(HandleTempFilesMixin, BaseModel):
     """
     A file associated with a piece of content.
@@ -160,6 +169,7 @@ class Artifact(HandleTempFilesMixin, BaseModel):
         sha256 (models.CharField): The SHA-256 checksum of the file (REQUIRED).
         sha384 (models.CharField): The SHA-384 checksum of the file.
         sha512 (models.CharField): The SHA-512 checksum of the file.
+        timestamp_of_interest (models.DateTimeField): timestamp that prevents orphan cleanup
     """
 
     def storage_path(self, name):
@@ -180,8 +190,9 @@ class Artifact(HandleTempFilesMixin, BaseModel):
     sha256 = models.CharField(max_length=64, null=False, unique=True, db_index=True)
     sha384 = models.CharField(max_length=96, null=True, unique=True, db_index=True)
     sha512 = models.CharField(max_length=128, null=True, unique=True, db_index=True)
+    timestamp_of_interest = models.DateTimeField(auto_now=True)
 
-    objects = BulkCreateManager()
+    objects = ArtifactManager()
 
     # All available digest fields ordered by algorithm strength.
     DIGEST_FIELDS = _DIGEST_FIELDS
@@ -420,12 +431,20 @@ class PulpTemporaryFile(HandleTempFilesMixin, BaseModel):
         return PulpTemporaryFile(file=file)
 
 
+class ContentManager(BulkCreateManager):
+
+    def orphaned(self):
+        expiration = now() - datetime.timedelta(minutes=settings.PERSERVED_ORPHAN_CONTENT)
+        return self.filter(version_memberships__isnull=True, timestamp_of_interest__lt=expiration)
+
+
 class Content(MasterModel, QueryMixin):
     """
     A piece of managed content.
 
     Fields:
         upstream_id (models.UUIDField) : identifier of content imported from an 'upstream' Pulp
+        timestamp_of_interest (models.DateTimeField): timestamp that prevents orphan cleanup
 
     Relations:
 
@@ -437,8 +456,9 @@ class Content(MasterModel, QueryMixin):
     upstream_id = models.UUIDField(null=True)  # Used by PulpImport/Export processing
 
     _artifacts = models.ManyToManyField(Artifact, through="ContentArtifact")
+    timestamp_of_interest = models.DateTimeField(auto_now=True)
 
-    objects = BulkCreateManager()
+    objects = ContentManager()
 
     class Meta:
         verbose_name_plural = "content"
@@ -494,6 +514,11 @@ class Content(MasterModel, QueryMixin):
             An un-saved instance of :class:`~pulpcore.plugin.models.Content` sub-class.
         """
         raise NotImplementedError()
+
+    @hook(AFTER_CREATE)
+    def update_artifact_timestamps(self):
+        """Update timestamp_of_interest on artifacts after content is created."""
+        self._artifacts.update(timestamp_of_interest=now())
 
 
 class ContentArtifact(BaseModel, QueryMixin):
