@@ -10,9 +10,6 @@ on:
   pull_request:
     branches:
       - '*'
-  push:
-    branches:
-      - '*'
 
 jobs:
 
@@ -54,7 +51,7 @@ jobs:
       - name: Check manifest
         run: check-manifest
 
-
+      
 
       - name: Check for gettext problems
         run: sh .ci/scripts/check_gettext.sh
@@ -71,12 +68,6 @@ jobs:
           - TEST: docs
           - TEST: s3
           - TEST: bindings
-          - TEST: pulp
-            WORKERSTYLE: new
-          - TEST: s3
-            WORKERSTYLE: new
-          - TEST: bindings
-            WORKERSTYLE: new
 
     steps:
       - uses: actions/checkout@v2
@@ -111,6 +102,13 @@ jobs:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
         shell: bash
+
+      - name: Install Python client
+        run: .github/workflows/scripts/install_python_client.sh
+
+      - name: Install Ruby client
+        if: ${{ env.TEST == 'bindings' }}
+        run: .github/workflows/scripts/install_ruby_client.sh
 
       - name: Before Script
         run: |
@@ -188,6 +186,9 @@ jobs:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
         shell: bash
+
+      - name: Install Python client
+        run: .github/workflows/scripts/install_python_client.sh
 
       - name: Before Script
         run: .github/workflows/scripts/before_script.sh
