@@ -1,6 +1,7 @@
-from django.db import DatabaseError
+from gettext import gettext as _
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
+from rest_framework.serializers import ValidationError
 
 from pulpcore.app import tasks
 from pulpcore.app.models import Content, RepositoryVersion
@@ -9,6 +10,7 @@ from pulpcore.app.serializers import (
     AsyncOperationResponseSerializer,
     RepositoryAddRemoveContentSerializer,
 )
+from pulpcore.app.viewsets import NamedModelViewSet
 from pulpcore.tasking.tasks import dispatch
 
 
@@ -38,23 +40,14 @@ class ModifyRepositoryActionMixin:
             base_version_pk = None
 
         if "add_content_units" in request.data:
-            for url in request.data["add_content_units"]:
-                content = self.get_resource(url, Content)
-                try:
-                    content.touch()
-                except DatabaseError:
-                    # content has since been removed. call get_url to raise an exception.
-                    content = self.get_resource(url, Content)
-                add_content_units.append(content.pk)
+            add_content_units = self._extract_content_units(request.data["add_content_units"])
+            add_content_units.touch()
 
         if "remove_content_units" in request.data:
-            for url in request.data["remove_content_units"]:
-                if url == "*":
-                    remove_content_units = [url]
-                    break
-                else:
-                    content = self.get_resource(url, Content)
-                    remove_content_units.append(content.pk)
+            if "*" in request.data["remove_content_units"]:
+                remove_content_units = ["*"]
+            else:
+                remove_content_units = self._extract_content_units(request.data["remove_content_units"])
 
         task = dispatch(
             tasks.repository.add_and_remove,
@@ -67,3 +60,16 @@ class ModifyRepositoryActionMixin:
             },
         )
         return OperationPostponedResponse(task, request)
+
+    def _extract_content_units(self, content_units):
+        """Extract and verify content units."""
+        content_map = {NamedModelViewSet.extract_pk(url): url for url in content_units}
+        existing_pks = Content.objects.filter(pk__in=content_map.keys())
+
+        missing_pks = set(content_map.keys()) - set(existing_pks.values_list("pk", flat=True))
+        if missing_pks:
+            missing_hrefs = [content_map[pk] for pk in missing_pks]
+            raise ValidationError(
+                _("Could not find the following content units: {}").format(missing_hrefs)
+            )
+        return content_map.keys()

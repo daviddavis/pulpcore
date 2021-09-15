@@ -1,0 +1,1 @@
+Refactored a method which updates content's timestamps checked by the orphan cleanup workflow.
