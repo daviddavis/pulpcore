@@ -1,0 +1,14 @@
+
+name: Test
+on:
+  push:
+  pull_request:
+
+jobs:
+  test1:
+    if: github.base_ref == 'master'
+    steps:
+      - run: echo "good"
+  test2:
+    steps:
+      - run: echo "good"
