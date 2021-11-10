@@ -727,7 +727,7 @@ Features
 
      If you intend to stick with the old tasking system, you should configure the
      ``USE_NEW_WORKER_TYPE`` setting to false before upgrading.
-  `#8948 <https://pulp.plan.io/issues/8948>`_
+     `#8948 <https://pulp.plan.io/issues/8948>`_
 
 
 Bugfixes
