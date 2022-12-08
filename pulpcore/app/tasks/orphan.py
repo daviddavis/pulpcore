@@ -49,9 +49,17 @@ def orphan_cleanup(content_pks=None, orphan_protection_time=settings.ORPHAN_PROT
         state="running",
     )
 
+    # find list of protected content types
+    protected = [PublishedMetadata.get_pulp_type()]
+    content_distinct = Content.objects.distinct("pulp_type")
+    for content in content_distinct:
+        if content.cast().PROTECTED_FROM_CLEANUP:
+            protected.append(content.pulp_type)
+
+
     while True:
         content = Content.objects.orphaned(orphan_protection_time, content_pks).exclude(
-            pulp_type=PublishedMetadata.get_pulp_type()
+            pulp_type__in=protected
         )
         content_count = content.count()
         if not content_count:
