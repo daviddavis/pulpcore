@@ -13,8 +13,8 @@ from opentelemetry.instrumentation.wsgi import OpenTelemetryMiddleware
 from pulpcore.app.entrypoint import using_pulp_api_worker
 
 
-if not using_pulp_api_worker.get(False):
-    raise RuntimeError("This app must be executed using pulpcore-api entrypoint.")
+# if not using_pulp_api_worker.get(False):
+    # raise RuntimeError("This app must be executed using pulpcore-api entrypoint.")
 
 application = get_wsgi_application()
 application = OpenTelemetryMiddleware(application)

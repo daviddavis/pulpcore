@@ -309,6 +309,36 @@ class Repository(MasterModel):
         """
         return Artifact.objects.filter(content__pk__in=version.content)
 
+    def protected_versions(self):
+        """
+        Return repository versions that are protected.
+
+        By default, a protected version is one with a publication that is distributed but plugins
+        can override this method to change this criteria.
+
+        Returns:
+            django.db.models.QuerySet: Repo versions which are protected.
+        """
+        from .publication import Distribution, Publication
+
+        # find all repo versions with publications are set on a distribution
+        qs = self.versions.filter(
+            publication__pk__in=Distribution.objects.values_list("publication__pk")
+        )
+
+        # if the repo is distributed, add the latest publication's repo version
+        if Distribution.objects.filter(repository=self.pk).exists():
+            publications = Publication.objects.filter(
+                repository_version__in=self.versions.all(), complete=True
+            )
+            latest_publication = publications.select_related("repository_version").latest(
+                "repository_version", "pulp_created"
+            )
+            if latest_publication:
+                qs |= self.versions.filter(pk=latest_publication.repository_version.pk)
+
+        return qs.distinct()
+
     @hook(AFTER_UPDATE, when="retain_repo_versions", has_changed=True)
     def _cleanup_old_versions_hook(self):
         # Do not attempt to clean up anything, while there is a transaction involving repo versions
@@ -325,8 +355,9 @@ class Repository(MasterModel):
                 _("Attempt to cleanup old versions, while a new version is in flight.")
             )
         if self.retain_repo_versions:
-            # Consider only completed versions for cleanup
-            for version in self.versions.complete().order_by("-number")[
+            # Consider only completed versions that aren't protected for cleanup
+            versions = self.versions.complete().exclude(pk__in=self.cast().protected_versions())
+            for version in versions.order_by("-number")[
                 self.retain_repo_versions :
             ]:
                 _logger.info(
