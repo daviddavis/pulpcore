@@ -16,31 +16,7 @@ def test_list_signing_services_empty():
 
 
 @pytest.mark.django_db
-def test_list_signing_services_single(tmp_path):
-    """Test the list-signing-services command with a single signing service."""
-    # Create a dummy script file
-    script_file = tmp_path / "signing_script.sh"
-    script_file.write_text("#!/bin/bash\necho 'test'")
-    
-    # Create a signing service with mocked validate() method
-    service = AsciiArmoredDetachedSigningService(
-        name="test-service",
-        public_key="test-key",
-        pubkey_fingerprint="test-fingerprint",
-        script=str(script_file),
-    )
-    # Mock the validate method to bypass GPG verification
-    with patch.object(service, 'validate', return_value=None):
-        service.save()
-    
-    out = StringIO()
-    call_command("list-signing-services", stdout=out)
-    output = out.getvalue().strip()
-    assert output == "test-service"
-
-
-@pytest.mark.django_db
-def test_list_signing_services_multiple(tmp_path):
+def test_list_signing_services(tmp_path):
     """Test the list-signing-services command with multiple signing services."""
     # Create a dummy script file
     script_file = tmp_path / "signing_script.sh"
