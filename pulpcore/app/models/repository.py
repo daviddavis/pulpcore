@@ -2,6 +2,7 @@
 Repository related Django models.
 """
 
+import inspect
 from contextlib import suppress
 from gettext import gettext as _
 from os import path
@@ -1414,7 +1415,18 @@ class RepositoryVersion(BaseModel):
                         self.save()
                         self._compute_counts()
                     self.repository.cleanup_old_versions()
-                    repository.on_new_version(self)
+                    publish = getattr(self, "_publish", False)
+                    sig = inspect.signature(repository.on_new_version)
+                    if publish and "publish" in sig.parameters:
+                        repository.on_new_version(self, publish=True)
+                    else:
+                        if publish:
+                            _logger.warning(
+                                "publish=True was requested but the repository type "
+                                "'%s' does not support it in on_new_version.",
+                                repository.TYPE,
+                            )
+                        repository.on_new_version(self)
             except Exception:
                 self.delete()
                 raise
