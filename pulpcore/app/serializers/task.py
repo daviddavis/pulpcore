@@ -266,6 +266,11 @@ class TaskScheduleSerializer(ModelSerializer):
     pulp_href = IdentityField(view_name="task-schedules-detail")
     name = serializers.CharField(help_text=_("The name of the task schedule."), allow_blank=False)
     task_name = serializers.CharField(help_text=_("The name of the task to be scheduled."))
+    task_kwargs = serializers.JSONField(
+        help_text=_("Keyword arguments to pass to the task."),
+        required=False,
+        default=dict,
+    )
     dispatch_interval = serializers.DurationField(
         help_text=_("Periodicity of the schedule."), allow_null=True
     )
@@ -285,6 +290,7 @@ class TaskScheduleSerializer(ModelSerializer):
         fields = ModelSerializer.Meta.fields + (
             "name",
             "task_name",
+            "task_kwargs",
             "dispatch_interval",
             "next_dispatch",
             "last_task",

@@ -14,3 +14,32 @@ therefore scheduled task dispatching will be missed if all workers are offline. 
 window, overdue schedules will dispatch at most one task, but down to timing, they may be
 rescheduled shortly thereafter. The task schedule API at `/pulp/api/v3/task-schedules/` is
 provided to read the tasks schedules.
+
+## Passing Arguments to Scheduled Tasks
+
+The `task_kwargs` field on `TaskSchedule` allows plugin writers to store keyword arguments that
+will be forwarded to the task function each time it is dispatched. This is useful when a scheduled
+task needs to operate on a specific resource or with specific options.
+
+```python
+from datetime import timedelta
+from pulpcore.plugin.models import TaskSchedule
+
+TaskSchedule(
+    name="my-plugin-sync-schedule",
+    task_name="my_plugin.app.tasks.sync",
+    task_kwargs={"remote_pk": str(remote.pk), "optimize": True},
+    dispatch_interval=timedelta(hours=6),
+).save()
+```
+
+The kwargs stored in `task_kwargs` are passed directly to `dispatch()` when the schedule fires,
+so they should match the signature of the task function referenced by `task_name`.
+
+!!! warning
+
+    Plugin authors **must** validate `task_kwargs` before creating or updating a `TaskSchedule`.
+    Because `task_kwargs` is a JSON field, it accepts arbitrary data. Invalid or unexpected
+    keyword arguments will cause the scheduled task to fail at dispatch time. Always verify that
+    the provided kwargs match the expected task function signature and that their values are of
+    the correct type.
